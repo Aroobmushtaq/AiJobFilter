@@ -54,14 +54,18 @@ It's built using **Streamlit** and integrated with **Groq’s Gemma 7B IT model*
 <br>
 **Post Job**
 
-![App Screenshot](https://huggingface.co/spaces/Aroob-Mushtaq123/ai_job_filter_app/blob/main/aiAppCode2.PNG)
+![App Screenshot](https://github.com/Aroobmushtaq/AiJobFilter/blob/main/aiAppCode2.PNG)
+<br>
 **Apply for Job**
 
-![App Screenshot](https://huggingface.co/spaces/Aroob-Mushtaq123/ai_job_filter_app/blob/main/aiAppCV3.PNG)
+![App Screenshot](https://github.com/Aroobmushtaq/AiJobFilter/blob/main/aiAppCV3.PNG)
+<br>
 **View Application**
 
-![App Screenshot](https://huggingface.co/spaces/Aroob-Mushtaq123/ai_job_filter_app/blob/main/aiApp4.PNG)
+![App Screenshot](https://github.com/Aroobmushtaq/AiJobFilter/blob/main/aiApp4.PNG)
 
+
+--- 
 
 
 ## 🧪 Live Demo
