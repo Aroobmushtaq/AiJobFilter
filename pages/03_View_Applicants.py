@@ -6,7 +6,7 @@ st.set_page_config(page_title="View Applicants", layout="centered")
 st.title("📋 View Applicants")
 
 # Set your Groq API key securely
-GROQ_API_KEY = os.getenv("groqApiKey") or "your_groq_api_key_here"
+GROQ_API_KEY = os.getenv("groqApiKey") or "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"
 MODEL = "mixtral-8x7b-32768"  # or use "llama3-8b-8192"
 
 def evaluate_resume_with_ai(resume, job):
