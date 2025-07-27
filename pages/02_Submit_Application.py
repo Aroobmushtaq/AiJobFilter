@@ -4,6 +4,43 @@ import pdfplumber
 st.set_page_config(page_title="AI Job Filter | Submit CV", layout="centered")
 st.title("🧑‍💼 Submit Your Application")
 
+# -------------------------------
+# 🧠 Simulated Groq AI function
+# -------------------------------
+def simulate_groq_ai_evaluation(resume_text, job_data):
+    text = resume_text.lower()
+
+    matched_skills = [skill for skill in job_data['skills'] if skill in text]
+    missing_skills = list(set(job_data['skills']) - set(matched_skills))
+
+    experience_pass = str(job_data['experience']) in text or f"{job_data['experience']}+" in text
+    education_pass = job_data['education'] in text
+
+    score = 0
+    if matched_skills:
+        score += 1
+    if experience_pass:
+        score += 1
+    if education_pass:
+        score += 1
+
+    if score == 3:
+        return "Suitable", []
+    elif score >= 1:
+        missing = []
+        if missing_skills:
+            missing.append(f"Skills: {', '.join(missing_skills)}")
+        if not experience_pass:
+            missing.append(f"Experience: {job_data['experience']}+ years not found")
+        if not education_pass:
+            missing.append(f"Education: {job_data['education'].capitalize()} not matched")
+        return "Partially Suitable", missing
+    else:
+        return "Not Suitable", []
+
+# -------------------------------
+# 🔄 Page logic
+# -------------------------------
 if 'job_data' not in st.session_state or not st.session_state.job_data:
     st.warning("⚠️ Please post job requirements first on the main page.")
     st.stop()
@@ -22,29 +59,20 @@ if submitted:
         st.error("❌ Please upload a valid PDF file.")
     else:
         with pdfplumber.open(uploaded_file) as pdf:
-            text = "\n".join(page.extract_text() for page in pdf.pages if page.extract_text())
+            resume_text = "\n".join(page.extract_text() for page in pdf.pages if page.extract_text())
 
         st.subheader("📄 CV Preview:")
-        st.text_area("Extracted Resume Text", text, height=200)
+        st.text_area("Extracted Resume Text", resume_text, height=200)
 
-        # ---- Dummy AI Logic (Simple String Matching) ----
-        matched_skills = [skill for skill in job_data['skills'] if skill in text.lower()]
-        missing_skills = list(set(job_data['skills']) - set(matched_skills))
+        # 🧠 Simulate Groq AI logic
+        result, missing_info = simulate_groq_ai_evaluation(resume_text, job_data)
 
-        experience_pass = str(job_data['experience']) in text or f"{job_data['experience']}+" in text
-        education_pass = job_data['education'] in text.lower()
-
-        # --- Determine Result ---
-        if matched_skills == job_data['skills'] and experience_pass and education_pass:
-            st.success("✅ Suitable Candidate!")
-        elif matched_skills or experience_pass or education_pass:
-            st.warning("⚠ Partially Suitable Candidate")
-            st.markdown("**Missing Criteria:**")
-            if missing_skills:
-                st.markdown(f"- Skills: `{', '.join(missing_skills)}`")
-            if not experience_pass:
-                st.markdown(f"- Experience: `{job_data['experience']}+ years` not found.")
-            if not education_pass:
-                st.markdown(f"- Education: `{job_data['education'].capitalize()}` not matched.")
+        if result == "Suitable":
+            st.success("✅ Candidate is Suitable for this job.")
+        elif result == "Partially Suitable":
+            st.warning("⚠ Candidate is Partially Suitable.")
+            st.markdown("**Missing Elements:**")
+            for item in missing_info:
+                st.markdown(f"- {item}")
         else:
-            st.error("❌ Not Suitable Candidate")
+            st.error("❌ Candidate is Not Suitable.")
