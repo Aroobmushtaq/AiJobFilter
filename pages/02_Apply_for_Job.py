@@ -1,39 +1,69 @@
 import streamlit as st
-import pdfplumber
+import os
+import requests
+from dotenv import load_dotenv
 
-st.set_page_config(page_title="Apply for Job", layout="centered")
-st.title("📤 Apply for a Job")
+load_dotenv()
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 
-if "jobs" not in st.session_state or not st.session_state.jobs:
-    st.warning("No jobs found. Please ask recruiter to post a job.")
-    st.stop()
+def evaluate_with_ai(job, cv_text):
+    prompt = f"""
+You are an AI recruiter assistant. Evaluate the applicant's resume against this job:
 
-if "applications" not in st.session_state:
-    st.session_state.applications = {}
+Job Title: {job['title']}
+Description: {job['description']}
+Required Skills: {job['skills']}
+Required Education: {job['education']}
 
-with st.form("apply_form"):
-    job_id = st.text_input("Enter Job Code")
-    name = st.text_input("Your Name")
-    email = st.text_input("Your Email")
-    file = st.file_uploader("Upload your CV (PDF)", type=["pdf"])
-    submitted = st.form_submit_button("Submit Application")
+Resume:
+{cv_text}
 
-    if submitted:
-        if job_id not in st.session_state.jobs:
-            st.error("❌ Invalid Job Code.")
-        elif not file:
-            st.error("❌ Please upload a PDF file.")
-        else:
-            with pdfplumber.open(file) as pdf:
-                resume_text = "\n".join(p.extract_text() for p in pdf.pages if p.extract_text())
+Return a short assessment of match, skills fit, education fit, and whether a human should manually review it.
+"""
 
-            if job_id not in st.session_state.applications:
-                st.session_state.applications[job_id] = []
+    headers = {
+        "Authorization": f"Bearer {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}",
+        "Content-Type": "application/json"
+    }
 
-            st.session_state.applications[job_id].append({
-                "name": name,
-                "email": email,
-                "resume": resume_text
-            })
+    payload = {
+        "model": "mixtral-8x7b-32768",
+        "messages": [
+            {"role": "system", "content": "You are an expert hiring assistant."},
+            {"role": "user", "content": prompt}
+        ]
+    }
 
-            st.success("✅ Application submitted successfully!")
+    response = requests.post("https://api.groq.com/openai/v1/chat/completions", headers=headers, json=payload)
+
+    if response.status_code == 200:
+        return response.json()['choices'][0]['message']['content']
+    else:
+        return f"❌ AI evaluation failed: {response.text}"
+
+def get_job_details(code):
+    if not os.path.exists("job_data.txt"):
+        return None
+    with open("job_data.txt", "r") as f:
+        for line in f:
+            parts = line.strip().split("|")
+            if parts[0] == code:
+                return {"code": parts[0], "title": parts[1], "description": parts[2], "skills": parts[3], "education": parts[4]}
+    return None
+
+st.title("📄 Apply for a Job")
+
+job_code = st.text_input("Enter Job Code")
+cv = st.text_area("Paste your Resume / CV text")
+
+if st.button("Submit Application"):
+    job = get_job_details(job_code)
+    if not job:
+        st.error("❌ Invalid Job Code")
+    else:
+        ai_result = evaluate_with_ai(job, cv)
+        with open(f"{job_code}_applicants.txt", "a") as f:
+            f.write(f"{cv}|||{ai_result}\n")
+        st.success("✅ Application submitted!")
+        st.markdown("### 🤖 AI Evaluation:")
+        st.info(ai_result)
