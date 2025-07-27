@@ -3,7 +3,9 @@ import os
 import requests
 
 # ✅ Groq API Key (same as Apply page)
-GROQ_API_KEY = "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"
+GROQ_API_KEY = import os
+groq_api_key = os.getenv("GROQ_API_KEY")
+
 
 # ✅ Get job details
 def get_job_details(code):
