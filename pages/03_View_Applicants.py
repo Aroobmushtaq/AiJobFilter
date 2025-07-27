@@ -1,11 +1,11 @@
 import streamlit as st
 import os
-from groq import Groq
+import requests
 
-# ✅ Manually set your API key here
-client = Groq(api_key="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")
+# ✅ Groq API Key (same as Apply page)
+GROQ_API_KEY = "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"
 
-# Get job details
+# ✅ Get job details
 def get_job_details(code):
     if not os.path.exists("job_data.txt"):
         return None
@@ -22,39 +22,48 @@ def get_job_details(code):
                 }
     return None
 
-# AI evaluation using Groq
-def evaluate_cv_with_ai(cv_text, job_description, job_skills, job_education):
+# ✅ AI Evaluation (same logic as apply)
+def evaluate_with_ai(job, cv_text):
     prompt = f"""
-You are an AI recruiter. A job is posted with the following details:
-
-Job Description:
-{job_description}
-
-Required Skills:
-{job_skills}
-
-Required Education:
-{job_education}
-
-Now, a candidate has submitted the following CV:
+You are an AI recruiter assistant. Evaluate the applicant's resume against this job:
+Job Title: {job['title']}
+Description: {job['description']}
+Required Skills: {job['skills']}
+Required Education: {job['education']}
+Resume:
 {cv_text}
 
-Evaluate the CV and provide a score out of 100 based on how well the candidate matches the job. Also give a short summary of the candidate's strengths or weaknesses.
-Respond in this format:
-Score: <score>/100
-Summary: <short summary>
-    """
-    try:
-        response = client.chat.completions.create(
-            model="gemma-7b-it",
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.2,
-        )
-        return response.choices[0].message.content
-    except Exception as e:
-        return f"Error: {str(e)}"
+Return a short assessment of match, skills fit, education fit, and whether a human should manually review it.
+"""
 
-# Streamlit UI
+    headers = {
+        "Authorization": f"Bearer {GROQ_API_KEY}",
+        "Content-Type": "application/json"
+    }
+
+    payload = {
+        "model": "llama3-8b-8192",
+        "messages": [
+            {"role": "system", "content": "You are an expert hiring assistant."},
+            {"role": "user", "content": prompt}
+        ]
+    }
+
+    response = requests.post(
+        "https://api.groq.com/openai/v1/chat/completions",
+        headers=headers,
+        json=payload
+    )
+
+    if response.status_code == 200:
+        try:
+            return response.json()['choices'][0]['message']['content']
+        except KeyError:
+            return f"❌ AI evaluation failed: Missing 'choices' in response"
+    else:
+        return f"❌ AI evaluation failed: {response.text}"
+
+# ✅ Streamlit UI
 st.title("👀 View Applications")
 
 job_code = st.text_input("Enter Job Code")
@@ -73,18 +82,17 @@ if job_code and st.button("View Applications"):
                 applicants = f.readlines()
 
             for i, applicant in enumerate(applicants, start=1):
-                cv_text, _ = applicant.split("|||")
-                st.markdown(f"### Applicant {i}")
-                with st.expander("📜 View CV"):
+                parts = applicant.split("|||")
+                if len(parts) == 2:
+                    cv_text, ai_result = parts
+                else:
+                    cv_text = parts[0]
+                    ai_result = evaluate_with_ai(job, cv_text)  # fallback
+
+                st.markdown(f"### 👤 Applicant {i}")
+                with st.expander("📄 View CV"):
                     st.text(cv_text.strip())
 
-                with st.spinner("🧠 Evaluating with AI..."):
-                    result = evaluate_cv_with_ai(
-                        cv_text,
-                        job["description"],
-                        job["skills"],
-                        job["education"]
-                    )
-                st.success("✅ AI Evaluation:")
-                st.code(result, language="text")
+                st.markdown("**🤖 AI Evaluation:**")
+                st.code(ai_result.strip())
                 st.markdown("---")
