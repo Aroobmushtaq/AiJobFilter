@@ -1,47 +1,33 @@
 import streamlit as st
 
-# Page Configuration
-st.set_page_config(page_title="AI Job Filter System", page_icon="💼", layout="centered")
+st.set_page_config(page_title="AI Job Filter", layout="centered")
+st.title("💼 AI-Powered Job Filter System")
 
-# Title and Subtitle
-st.markdown("<h1 style='text-align: center; color: #2E86C1;'>💼 AI-Powered Job Filter System</h1>", unsafe_allow_html=True)
-st.markdown("<h4 style='text-align: center; color: gray;'>Your smart assistant for job matching & resume evaluation</h4>", unsafe_allow_html=True)
-st.markdown("---")
-
-# Intro Section
 st.markdown("""
-### 👋 Welcome!
+<style>
+.big-title { font-size:28px; font-weight:bold; margin-top:20px; color:#4a90e2; }
+.desc-text { font-size:18px; margin-bottom:10px; }
+</style>
+""", unsafe_allow_html=True)
 
-This platform connects **Job Providers** and **Job Seekers** through smart AI-powered matching. Whether you're hiring or applying, our system ensures efficient and intelligent screening.
+st.markdown('<div class="big-title">Welcome to the AI Job Filter System 🚀</div>', unsafe_allow_html=True)
 
-""")
-
-# Recruiter Instructions
 st.markdown("""
-#### 🧑‍💼 For Recruiters:
-- 📝 **Post a Job** with complete requirements
-- 🎯 Get a **Unique Job Code** for each job
-- 👀 View only the candidates who applied to your job
-- 🤖 Let AI analyze applicant resumes against your requirements
-""")
+<div class="desc-text">
+👩‍💼 <b>Recruiters</b> can:
+<ul>
+  <li>Post jobs</li>
+  <li>Receive a unique <code>Job Code</code></li>
+  <li>View applicants for their job only</li>
+</ul>
+</div>
 
-# Applicant Instructions
-st.markdown("""
-#### 🧑‍🎓 For Applicants:
-- 🔍 Use the **Job Code** to find relevant job posts
-- 📤 **Upload your CV** or resume in PDF format
-- 💡 Receive **AI-generated feedback** on your job match
-- 📊 See a percentage-based **fit score** to help you understand your suitability
-""")
-
-# Benefits
-st.markdown("""
-#### 🌟 Why Use This App?
-- ✅ Saves time for recruiters by **automating resume screening**
-- ✅ Helps applicants understand how well they match a job
-- ✅ Powered by **AI models** to analyze resume content and job descriptions
-""")
-
-# Footer
-st.markdown("---")
-st.markdown("<p style='text-align: center; color: #999;'>Made with ❤️ using Streamlit & Hugging Face Transformers</p>", unsafe_allow_html=True)
+<div class="desc-text">
+🧑‍🎓 <b>Applicants</b> can:
+<ul>
+  <li>Use a <code>Job Code</code> to apply</li>
+  <li>Upload their resume</li>
+  <li>Get AI-based feedback on their eligibility</li>
+</ul>
+</div>
+""", unsafe_allow_html=True)
