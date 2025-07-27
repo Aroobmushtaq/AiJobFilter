@@ -48,10 +48,20 @@ It's built using **Streamlit** and integrated with **Groq’s Gemma 7B IT model*
 4. Generates a match score + feedback for recruiter use.
 
 ## 📸 Screenshot
+**Home Page**
 
-![App Screenshot](https://your-image-link-here.com/screenshot.png)
+![App Screenshot](https://huggingface.co/spaces/Aroob-Mushtaq123/ai_job_filter_app/blob/main/aiApp1.PNG)
+**Post Job**
 
-> Replace the above links with actual hosted image URLs (e.g., from Imgur or Hugging Face static hosting).
+![App Screenshot](https://huggingface.co/spaces/Aroob-Mushtaq123/ai_job_filter_app/blob/main/aiAppCode2.PNG)
+**Apply for Job**
+
+![App Screenshot](https://huggingface.co/spaces/Aroob-Mushtaq123/ai_job_filter_app/blob/main/aiAppCV3.PNG)
+**View Application**
+
+![App Screenshot](https://huggingface.co/spaces/Aroob-Mushtaq123/ai_job_filter_app/blob/main/aiApp4.PNG)
+
+
 
 ## 🧪 Live Demo
 
