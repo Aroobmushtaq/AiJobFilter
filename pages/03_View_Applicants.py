@@ -1,63 +1,60 @@
 import streamlit as st
-from sentence_transformers import SentenceTransformer, util
+import requests
+import os
 
 st.set_page_config(page_title="View Applicants", layout="centered")
 st.title("📋 View Applicants")
 
-@st.cache_resource
-def load_model():
-    return SentenceTransformer('all-MiniLM-L6-v2')
+# Set your Groq API key securely
+GROQ_API_KEY = os.getenv("GROQ_API_KEY") or "your_groq_api_key_here"
+MODEL = "mixtral-8x7b-32768"  # or use "llama3-8b-8192"
 
-model = load_model()
+def evaluate_resume_with_ai(resume, job):
+    prompt = f"""
+You are an expert recruiter. Evaluate the following resume against the job description.
+Return a JSON with:
+- 'summary': 2–4 line review (strengths, missing info)
+- 'verdict': 'suitable', 'maybe', or 'not suitable'
 
-# Feedback generator
-def generate_feedback(resume, job):
-    positives = []
-    negatives = []
+Job:
+Title: {job['job_title']}
+Skills: {', '.join(job['skills'])}
+Experience: {job['experience']} years
+Education: {job['education']}
 
-    resume_lower = resume.lower()
+Resume:
+{resume}
+"""
 
-    # Skill check
-    for skill in job['skills']:
-        if skill.lower() in resume_lower:
-            positives.append(f"Has experience with **{skill}**.")
-        else:
-            negatives.append(f"Missing experience in **{skill}**.")
+    headers = {
+        "Authorization": f"Bearer {GROQ_API_KEY}",
+        "Content-Type": "application/json"
+    }
 
-    # Education check
-    if job['education'].lower() in resume_lower:
-        positives.append(f"Meets education requirement (**{job['education']}**).")
-    else:
-        negatives.append(f"Does not clearly mention required education (**{job['education']}**).")
+    response = requests.post(
+        "https://api.groq.com/openai/v1/chat/completions",
+        json={
+            "model": MODEL,
+            "messages": [{"role": "user", "content": prompt}],
+            "temperature": 0.4
+        },
+        headers=headers,
+        timeout=20
+    )
 
-    # Experience check (only if experience > 0)
-    if job['experience'] > 0:
-        if str(job['experience']) in resume_lower:
-            positives.append(f"Mentions **{job['experience']} years** of experience.")
-        else:
-            negatives.append(f"No clear mention of **{job['experience']} years** experience.")
+    result = response.json()
+    message = result['choices'][0]['message']['content']
+    return message
 
-    return positives, negatives
-
-# Similarity scoring
-def ai_score(resume, job):
-    job_prompt = f"""
-    Job Title: {job['job_title']}
-    Required Skills: {', '.join(job['skills'])}
-    Experience: {job['experience']} years
-    Education: {job['education']}
-    """
-    r_embed = model.encode(resume, convert_to_tensor=True)
-    j_embed = model.encode(job_prompt, convert_to_tensor=True)
-    return util.pytorch_cos_sim(r_embed, j_embed).item()
-
-# Session check
+# Check for session state
 if "jobs" not in st.session_state or "applications" not in st.session_state:
     st.warning("No jobs or applications found.")
     st.stop()
 
+# Input job code
 job_id = st.text_input("Enter your Job Code")
 
+# Main logic
 if job_id and job_id in st.session_state.jobs:
     job = st.session_state.jobs[job_id]
     applicants = st.session_state.applications.get(job_id, [])
@@ -68,47 +65,18 @@ if job_id and job_id in st.session_state.jobs:
         st.info("No applicants yet.")
     else:
         for app in applicants:
-            score = ai_score(app['resume'], job)
-            positives, negatives = generate_feedback(app['resume'], job)
-
-            st.markdown("---")
-            st.markdown(f"**👤 Name:** {app['name']}  \n**📧 Email:** {app['email']}  \n**🤖 AI Match Score:** `{score:.2f}`")
-
-            # Match evaluation
-            if score >= 0.75:
-                st.success("✅ Strong Fit: This applicant is highly suitable for interview.")
-                st.markdown("### ✅ Matched Points")
-                for pos in positives:
-                    st.markdown(f"- {pos}")
-
-                if negatives:
-                    st.markdown("### ⚠️ Double Check")
-                    for neg in negatives:
-                        st.markdown(f"- {neg}")
-
-                st.markdown(f"""
-                ---
-                📩 **Contact Applicant**  
-                👉 [Click to Email {app['email']}](mailto:{app['email']})
-                """)
-
-            elif 0.5 <= score < 0.75:
-                st.warning("⚠ Partial Match: May require manual review.")
-                st.markdown("### ✅ Matching Elements")
-                for pos in positives:
-                    st.markdown(f"- {pos}")
-                st.markdown("### ❌ Missing Elements")
-                for neg in negatives:
-                    st.markdown(f"- {neg}")
-                st.info("🧠 AI suggests: *Review the resume manually to make a final decision.*")
-
-            else:
-                st.error("❌ Not a Fit: This resume does not align well with job requirements.")
-                st.markdown("### ❌ Key Mismatches")
-                for neg in negatives:
-                    st.markdown(f"- {neg}")
-                st.caption("🔒 Contact option hidden as the candidate doesn't meet the baseline.")
-
+            with st.spinner(f"Analyzing {app['name']}'s resume..."):
+                try:
+                    analysis = evaluate_resume_with_ai(app['resume'], job)
+                    st.markdown(f"""
+---
+**Name:** {app['name']}  
+**Email:** {app['email']}  
+**AI Feedback:**  
+{analysis}
+""")
+                except Exception as e:
+                    st.error(f"❌ AI evaluation failed: {e}")
 else:
     if job_id:
         st.error("❌ Invalid Job Code")
