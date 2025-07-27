@@ -10,36 +10,36 @@ def load_model():
 
 model = load_model()
 
-# Helper to generate a feedback paragraph
+# Feedback generator
 def generate_feedback(resume, job):
     positives = []
     negatives = []
 
     resume_lower = resume.lower()
 
-    # Skill matching
+    # Skill check
     for skill in job['skills']:
         if skill.lower() in resume_lower:
-            positives.append(f"Has experience with **{skill}**")
+            positives.append(f"Has experience with **{skill}**.")
         else:
-            negatives.append(f"Missing experience in **{skill}**")
+            negatives.append(f"Missing experience in **{skill}**.")
 
-    # Education match
+    # Education check
     if job['education'].lower() in resume_lower:
-        positives.append(f"Meets education requirement (**{job['education']}**)")
-
+        positives.append(f"Meets education requirement (**{job['education']}**).")
     else:
-        negatives.append(f"Does not clearly mention required education (**{job['education']}**)")
+        negatives.append(f"Does not clearly mention required education (**{job['education']}**).")
 
-    # Experience match (just rough mention of years)
-    if str(job['experience']) in resume_lower:
-        positives.append(f"Mentions **{job['experience']} years** of experience")
-    else:
-        negatives.append(f"No clear mention of **{job['experience']} years** experience")
+    # Experience check (only if experience > 0)
+    if job['experience'] > 0:
+        if str(job['experience']) in resume_lower:
+            positives.append(f"Mentions **{job['experience']} years** of experience.")
+        else:
+            negatives.append(f"No clear mention of **{job['experience']} years** experience.")
 
     return positives, negatives
 
-# AI similarity score
+# Similarity scoring
 def ai_score(resume, job):
     job_prompt = f"""
     Job Title: {job['job_title']}
@@ -51,7 +51,7 @@ def ai_score(resume, job):
     j_embed = model.encode(job_prompt, convert_to_tensor=True)
     return util.pytorch_cos_sim(r_embed, j_embed).item()
 
-# Session state check
+# Session check
 if "jobs" not in st.session_state or "applications" not in st.session_state:
     st.warning("No jobs or applications found.")
     st.stop()
@@ -71,51 +71,43 @@ if job_id and job_id in st.session_state.jobs:
             score = ai_score(app['resume'], job)
             positives, negatives = generate_feedback(app['resume'], job)
 
-            st.markdown(f"""---  
-            **👤 Name:** {app['name']}  
-            **📧 Email:** {app['email']}  
-            **🤖 AI Score:** `{score:.2f}`  
-            """)
+            st.markdown("---")
+            st.markdown(f"**👤 Name:** {app['name']}  \n**📧 Email:** {app['email']}  \n**🤖 AI Match Score:** `{score:.2f}`")
 
-            if score > 0.7:
-                st.success("✅ This applicant is a strong match for the job.")
-
-                st.markdown("### 🔍 Positive Points")
+            # Match evaluation
+            if score >= 0.75:
+                st.success("✅ Strong Fit: This applicant is highly suitable for interview.")
+                st.markdown("### ✅ Matched Points")
                 for pos in positives:
-                    st.markdown(f"- ✅ {pos}")
+                    st.markdown(f"- {pos}")
 
                 if negatives:
-                    st.markdown("### ⚠️ Areas to Double-Check")
+                    st.markdown("### ⚠️ Double Check")
                     for neg in negatives:
-                        st.markdown(f"- ⚠️ {neg}")
+                        st.markdown(f"- {neg}")
 
-                st.markdown(f"""  
-                ---  
+                st.markdown(f"""
+                ---
                 📩 **Contact Applicant**  
-                [Send Email to {app['email']}](mailto:{app['email']})  
+                👉 [Click to Email {app['email']}](mailto:{app['email']})
                 """)
 
-            elif score > 0.4:
-                st.warning("⚠ This application may need manual review.")
-
-                st.markdown("### ✅ Matching Points")
+            elif 0.5 <= score < 0.75:
+                st.warning("⚠ Partial Match: May require manual review.")
+                st.markdown("### ✅ Matching Elements")
                 for pos in positives:
-                    st.markdown(f"- ✅ {pos}")
-
-                st.markdown("### ❌ Not Matching / Missing Info")
+                    st.markdown(f"- {pos}")
+                st.markdown("### ❌ Missing Elements")
                 for neg in negatives:
-                    st.markdown(f"- ❌ {neg}")
-
-                st.info("You may want to review the CV manually for a better decision.")
+                    st.markdown(f"- {neg}")
+                st.info("🧠 AI suggests: *Review the resume manually to make a final decision.*")
 
             else:
-                st.error("❌ This applicant does not meet the basic requirements.")
-
-                st.markdown("### ❌ Gaps Found")
+                st.error("❌ Not a Fit: This resume does not align well with job requirements.")
+                st.markdown("### ❌ Key Mismatches")
                 for neg in negatives:
-                    st.markdown(f"- ❌ {neg}")
-
-                st.caption("Not recommended for interview at this stage.")
+                    st.markdown(f"- {neg}")
+                st.caption("🔒 Contact option hidden as the candidate doesn't meet the baseline.")
 
 else:
     if job_id:
