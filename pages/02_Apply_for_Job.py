@@ -1,10 +1,9 @@
 import streamlit as st
 import os
 import requests
-from dotenv import load_dotenv
 
-load_dotenv()
-GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+
+GROQ_API_KEY = "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"
 
 def evaluate_with_ai(job, cv_text):
     prompt = f"""
