@@ -4,8 +4,10 @@ import requests
 from PyPDF2 import PdfReader
 import docx
 
+# ✅ Your Groq API Key
 GROQ_API_KEY = "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"
 
+# ✅ Function to extract text from uploaded file
 def extract_text_from_file(uploaded_file):
     if uploaded_file.type == "text/plain":
         return uploaded_file.read().decode("utf-8")
@@ -14,16 +16,21 @@ def extract_text_from_file(uploaded_file):
         reader = PdfReader(uploaded_file)
         text = ""
         for page in reader.pages:
-            text += page.extract_text()
+            if page.extract_text():
+                text += page.extract_text()
         return text
 
-    elif uploaded_file.type in ["application/vnd.openxmlformats-officedocument.wordprocessingml.document", "application/msword"]:
+    elif uploaded_file.type in [
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "application/msword"
+    ]:
         doc = docx.Document(uploaded_file)
         return "\n".join([para.text for para in doc.paragraphs])
 
     else:
         return None
 
+# ✅ AI Evaluation using Groq (llama3-8b)
 def evaluate_with_ai(job, cv_text):
     prompt = f"""
 You are an AI recruiter assistant. Evaluate the applicant's resume against this job:
@@ -43,14 +50,18 @@ Return a short assessment of match, skills fit, education fit, and whether a hum
     }
 
     payload = {
-        "model": "mixtral-8x7b-32768",
+        "model": "llama3-8b-8192",  # ✅ NEW WORKING MODEL
         "messages": [
             {"role": "system", "content": "You are an expert hiring assistant."},
             {"role": "user", "content": prompt}
         ]
     }
 
-    response = requests.post("https://api.groq.com/openai/v1/chat/completions", headers=headers, json=payload)
+    response = requests.post(
+        "https://api.groq.com/openai/v1/chat/completions",
+        headers=headers,
+        json=payload
+    )
 
     if response.status_code == 200:
         try:
@@ -60,6 +71,7 @@ Return a short assessment of match, skills fit, education fit, and whether a hum
     else:
         return f"❌ AI evaluation failed: {response.text}"
 
+# ✅ Retrieve job details from local file
 def get_job_details(code):
     if not os.path.exists("job_data.txt"):
         return None
@@ -67,10 +79,16 @@ def get_job_details(code):
         for line in f:
             parts = line.strip().split("|")
             if parts[0] == code:
-                return {"code": parts[0], "title": parts[1], "description": parts[2], "skills": parts[3], "education": parts[4]}
+                return {
+                    "code": parts[0],
+                    "title": parts[1],
+                    "description": parts[2],
+                    "skills": parts[3],
+                    "education": parts[4]
+                }
     return None
 
-# Streamlit UI
+# ✅ Streamlit UI
 st.title("📄 Apply for a Job")
 
 job_code = st.text_input("Enter Job Code")
@@ -85,7 +103,7 @@ if st.button("Submit Application"):
             st.error("❌ Invalid Job Code")
         else:
             cv_text = extract_text_from_file(uploaded_cv)
-            if not cv_text:
+            if not cv_text or cv_text.strip() == "":
                 st.error("❌ Could not extract text from uploaded file.")
             else:
                 ai_result = evaluate_with_ai(job, cv_text)
