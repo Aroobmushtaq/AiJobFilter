@@ -27,9 +27,11 @@ def extract_text_from_file(uploaded_file):
 def get_job_details(code):
     if not os.path.exists("job_data.txt"):
         return None
-    with open("job_data.txt", "r") as f:
+    with open("job_data.txt", "r", encoding="utf-8") as f:
         for line in f:
             parts = line.strip().split("|")
+            if len(parts) < 5:
+                continue  # ✅ Skip lines that don't have all required fields
             if parts[0] == code:
                 return {
                     "code": parts[0],
