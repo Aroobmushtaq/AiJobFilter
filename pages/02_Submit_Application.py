@@ -1,53 +1,46 @@
 import streamlit as st
 import pdfplumber
+from sentence_transformers import SentenceTransformer, util
 
 st.set_page_config(page_title="AI Job Filter | Submit CV", layout="centered")
 st.title("🧑‍💼 Submit Your Application")
 
-# -------------------------------
-# 🧠 Simulated Groq AI function
-# -------------------------------
-def simulate_groq_ai_evaluation(resume_text, job_data):
-    text = resume_text.lower()
-
-    matched_skills = [skill for skill in job_data['skills'] if skill in text]
-    missing_skills = list(set(job_data['skills']) - set(matched_skills))
-
-    experience_pass = str(job_data['experience']) in text or f"{job_data['experience']}+" in text
-    education_pass = job_data['education'] in text
-
-    score = 0
-    if matched_skills:
-        score += 1
-    if experience_pass:
-        score += 1
-    if education_pass:
-        score += 1
-
-    if score == 3:
-        return "Suitable", []
-    elif score >= 1:
-        missing = []
-        if missing_skills:
-            missing.append(f"Skills: {', '.join(missing_skills)}")
-        if not experience_pass:
-            missing.append(f"Experience: {job_data['experience']}+ years not found")
-        if not education_pass:
-            missing.append(f"Education: {job_data['education'].capitalize()} not matched")
-        return "Partially Suitable", missing
-    else:
-        return "Not Suitable", []
-
-# -------------------------------
-# 🔄 Page logic
-# -------------------------------
+# 🔄 Load job data
 if 'job_data' not in st.session_state or not st.session_state.job_data:
     st.warning("⚠️ Please post job requirements first on the main page.")
     st.stop()
 
 job_data = st.session_state.job_data
 
-# --- Candidate Form ---
+# 🧠 Load AI model
+@st.cache_resource
+def load_model():
+    return SentenceTransformer('all-MiniLM-L6-v2')
+
+model = load_model()
+
+# 🧠 Simulate AI evaluation using sentence embeddings
+def simulate_ai_with_embeddings(resume_text, job_data):
+    job_prompt = f"""
+    Job Title: {job_data['job_title']}
+    Required Skills: {', '.join(job_data['skills'])}
+    Minimum Experience: {job_data['experience']} years
+    Education Level: {job_data['education']}
+    """
+
+    resume_embedding = model.encode(resume_text, convert_to_tensor=True)
+    job_embedding = model.encode(job_prompt, convert_to_tensor=True)
+
+    similarity = util.pytorch_cos_sim(resume_embedding, job_embedding).item()
+
+    if similarity > 0.7:
+        return "Suitable", similarity
+    elif similarity > 0.4:
+        return "Partially Suitable", similarity
+    else:
+        return "Not Suitable", similarity
+
+# 🧾 Candidate Form
 with st.form("candidate_form"):
     name = st.text_input("Full Name")
     email = st.text_input("Email")
@@ -62,17 +55,15 @@ if submitted:
             resume_text = "\n".join(page.extract_text() for page in pdf.pages if page.extract_text())
 
         st.subheader("📄 CV Preview:")
-        st.text_area("Extracted Resume Text", resume_text, height=200)
+        st.text_area("Extracted Resume Text", resume_text, height=250)
 
-        # 🧠 Simulate Groq AI logic
-        result, missing_info = simulate_groq_ai_evaluation(resume_text, job_data)
+        # 🧠 AI evaluation
+        result, score = simulate_ai_with_embeddings(resume_text, job_data)
+        st.markdown(f"**🔍 AI Similarity Score:** `{score:.2f}`")
 
         if result == "Suitable":
-            st.success("✅ Candidate is Suitable for this job.")
+            st.success("✅ Candidate is Suitable based on AI evaluation.")
         elif result == "Partially Suitable":
-            st.warning("⚠ Candidate is Partially Suitable.")
-            st.markdown("**Missing Elements:**")
-            for item in missing_info:
-                st.markdown(f"- {item}")
+            st.warning("⚠ Candidate is Partially Suitable based on AI evaluation.")
         else:
             st.error("❌ Candidate is Not Suitable.")
